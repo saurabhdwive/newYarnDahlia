@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useIsFocused, useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -28,7 +28,7 @@ import TypingIndicator from './typing_indicator';
 import { ChatFoodie24x7Response, ChatRequest } from '../models/ai_reply_model';
 import { ai_Chat_Reply_api } from '../api_functions/api_functions';
 import WebViewScreen from './webview_screen';
-import { useRoute } from '@react-navigation/native';
+
 // import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Geolocation from 'react-native-geolocation-service';
 import { PERMISSIONS, request, RESULTS } from 'react-native-permissions';
@@ -126,6 +126,16 @@ export default function AskMartynaScreen() {
   const params = route.params as { restaurantName?: string };
   const restaurantName = params?.restaurantName || '';
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [recognizedText, setRecognizedText] = useState<string>('');
+
+  // Callback function to receive recognized text from PromptScreen
+  const handleRecognizedText = (text: string) => {
+    console.log('📱 Received recognized text in HomeScreen:', text);
+    // setRecognizedText(text);
+    // Set it as input text so user can see and edit before sending
+    // setInput(text);
+    sendMessage(text);
+  };
 
   // const isFocused = useIsFocused();
 
@@ -199,6 +209,24 @@ export default function AskMartynaScreen() {
       console.log('⚠️ No restaurant name received yet');
     }
   }, [restaurantName]);
+
+  // Handle recognized text from PromptScreen
+  useEffect(() => {
+    if (recognizedText) {
+      console.log('🎤 Recognized text received in HomeScreen:', recognizedText);
+      // You can choose to either:
+      // 1. Set it as input text (user can edit before sending)
+      // 2. Send it directly as a message
+      // 3. Both
+      setInput(recognizedText);
+      
+      // Optionally, you can auto-send the message
+      // sendMessage(recognizedText);
+      
+      // Clear the recognized text after handling it
+      setRecognizedText('');
+    }
+  }, [recognizedText]);
 
   const chatReply_Api = async (textInput: string) => {
     chatIsTyping();
@@ -850,10 +878,19 @@ export default function AskMartynaScreen() {
           {/* keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 100} */}
           <View style={{ backgroundColor: '#F6F7F8', marginHorizontal: 20, marginTop: 12, borderRadius: 20, marginBottom: 16 }}>
             <View style={{ padding: 16 }}>
+              {/* Speech recognition indicator */}
+              {recognizedText && (
+                <View style={styles.speechIndicator}>
+                  <Text style={styles.speechIndicatorText}>🎤 Speech recognized</Text>
+                </View>
+              )}
               <TextInput
                 autoCapitalize='none'
                 autoCorrect={false}
-                style={styles.searchInput}
+                style={[
+                  styles.searchInput,
+                  recognizedText && input === recognizedText && styles.speechInput
+                ]}
                 onChangeText={setInput}
                 value={input}
                 // returnKeyType="send"
@@ -874,7 +911,10 @@ export default function AskMartynaScreen() {
               <View style={[styles.searchContainer, { justifyContent: 'space-between' }]}>
                 <TouchableOpacity
                   style={styles.askMartynaButton}
-                  onPress={() => navigation.navigate('PromptScreen')}
+                  onPress={() => {
+                    console.log('🎤 Opening PromptScreen for speech recognition...');
+                    navigation.navigate('PromptScreen', { onTextChange: handleRecognizedText });
+                  }}
                 >
                   <Image source={askMartynaIcon} style={styles.askMartynaIcon} />
                   <Text style={styles.askMartynaText}>{t('ask_dahlia')}</Text>
@@ -1006,6 +1046,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     // marginVertical: 20,
     color: '#111',
+  },
+  speechIndicator: {
+    backgroundColor: '#E8F5E8',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginBottom: 8,
+    alignSelf: 'flex-start',
+  },
+  speechIndicatorText: {
+    fontSize: 12,
+    color: '#2E7D32',
+    fontWeight: '500',
+  },
+  speechInput: {
+    borderColor: '#4CAF50',
+    borderWidth: 1,
+    backgroundColor: '#F1F8E9',
   },
   optionScrollContainer: {
     width: '100%',

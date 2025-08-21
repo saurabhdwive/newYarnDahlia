@@ -289,8 +289,8 @@
 
 
 
-import { useNavigation } from "@react-navigation/native";
-import React, { useState, useEffect } from "react";
+import { useNavigation, useFocusEffect, useRoute } from "@react-navigation/native";
+import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
   View,
@@ -330,12 +330,26 @@ interface SpeechToTextProps {
 
 const PromptScreen: React.FC<SpeechToTextProps> = ({ onTextChange, style }) => {
   const navigation = useNavigation();
+  const route = useRoute();
+  
+  // Get the callback from navigation params
+  const params = route.params as { onTextChange?: (text: string) => void };
+  const textChangeCallback = params?.onTextChange || onTextChange;
   const [recognizedText, setRecognizedText] = useState("");
   const [status, setStatus] = useState("Ready to listen");
   const [finalReceived, setFinalReceived] = useState(false);
   const [manuallyStopped, setManuallyStopped] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [hasStartedListening, setHasStartedListening] = useState(false);
   const handleClose = () => {
-    navigation.goBack(); // or any custom close logic
+    // Send the recognized text back to HomeScreen before navigating
+    if (recognizedText && onTextChange && textChangeCallback) {
+      console.log("📤 Sending recognized text back to HomeScreen before closing:", recognizedText);
+      textChangeCallback(recognizedText);
+    }
+    
+    // Navigate back to HomeScreen
+    navigation.goBack();
   };
   const bg1 = require('../../assets/images/bg1.png');
   const bg2 = require('../../assets/images/bg2.png');
@@ -343,143 +357,224 @@ const PromptScreen: React.FC<SpeechToTextProps> = ({ onTextChange, style }) => {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
-  // useEffect(() => {
-  //   console.log("🔎 Checking permissions...");
-  //   checkPermissions();
+  useEffect(() => {
+    console.log("🔎 Setting up event listeners...");
+    
+    // Reset state when component mounts
+    setRecognizedText("");
+    setStatus("Ready to listen");
+    setFinalReceived(false);
+    setManuallyStopped(false);
+    setIsListening(false);
+    setHasStartedListening(false);
 
-  //   console.log("👂 Setting up event listeners. Available methods:", Object.keys(Voice2Text));
+    console.log("👂 Setting up event listeners. Available methods:", Object.keys(Voice2Text));
 
-  //   const unsubscribeResults = Voice2Text.onResults((results: any) => {
-  //     console.log("📥 onResults fired:", results);
-  //     if (results?.text || (results?.length && results[0])) {
-  //       const text = results.text || results[0];
-  //       setRecognizedText(text);
-  //       if (onTextChange) onTextChange(text);
-  //       setStatus("✅ Final result received!");
-  //       setFinalReceived(true);
-  //     }
-  //   });
+    const unsubscribeResults = Voice2Text.onResults((results: any) => {
+      console.log("📥 onResults fired:", results);
+      if (results?.text || (results?.length && results[0])) {
+        const text = results.text || results[0];
+        setRecognizedText(text);
+        // Don't send text back immediately - only when screen closes
+        setStatus("✅ Final result received!");
+        setFinalReceived(true);
+        setIsListening(false);
+      }
+    });
 
-  //   const unsubscribePartial = Voice2Text.onPartialResults((partial: any) => {
-  //     console.log("📝 onPartialResults fired:", partial);
-  //     if (partial?.partialText) {
-  //       setRecognizedText(partial.partialText);
-  //       setStatus("Listening (partial result)...");
-  //       if (onTextChange) onTextChange(partial.partialText);
-  //     }
-  //   });
+    const unsubscribePartial = Voice2Text.onPartialResults((partial: any) => {
+      console.log("📝 onPartialResults fired:", partial);
+      if (partial?.partialText) {
+        setRecognizedText(partial.partialText);
+        setStatus("Listening (partial result)...");
+        // Don't send partial results back - only final result when closing
+      }
+    });
 
-  //   const unsubscribeError = Voice2Text.onError((err: any) => {
-  //     console.error("🚨 onError fired:", err);
+    const unsubscribeError = Voice2Text.onError((err: any) => {
+      console.error("🚨 onError fired:", err);
 
-  //     if (err.code === 5) {
-  //       if (manuallyStopped) {
-  //         console.log("ℹ️ Ignored error 5 (manual stop)");
-  //         return; // ✅ ignore error when user stopped
-  //       }
-  //       if (finalReceived) {
-  //         console.log("⚠️ Ignored error 5 (already got final result)");
-  //         return;
-  //       }
-  //       setStatus("Stopped with last partial result.");
-  //     } else {
-  //       setStatus("Error: " + JSON.stringify(err));
-  //     }
-  //   });
+      if (err.code === 5) {
+        if (manuallyStopped) {
+          console.log("ℹ️ Ignored error 5 (manual stop)");
+          return; // ✅ ignore error when user stopped
+        }
+        if (finalReceived) {
+          console.log("⚠️ Ignored error 5 (already got final result)");
+          return;
+        }
+        setStatus("Stopped with last partial result.");
+      } else {
+        setStatus("Error: " + JSON.stringify(err));
+      }
+      setIsListening(false);
+    });
 
-  //   const unsubscribeStart = Voice2Text.onSpeechStart(() => {
-  //     console.log("🎙️ onSpeechStart fired");
-  //     setStatus("Speech started...");
-  //     setFinalReceived(false);
-  //     setManuallyStopped(false);
-  //   });
+    const unsubscribeStart = Voice2Text.onSpeechStart(() => {
+      console.log("🎙️ onSpeechStart fired");
+      setStatus("Speech started...");
+      setFinalReceived(false);
+      setManuallyStopped(false);
+      setIsListening(true);
+    });
 
-  //   return () => {
-  //     console.log("🧹 Cleaning up listeners & shutting down recognizer");
-  //     unsubscribeResults?.();
-  //     unsubscribePartial?.();
-  //     unsubscribeError?.();
-  //     unsubscribeStart?.();
-  //     Voice2Text.stopListening().catch(() => {});
-  //     Voice2Text.cancelListening().catch(() => {});
-  //     Voice2Text.destroy().catch(() => {});
-  //   };
-  // }, []);
+    return () => {
+      console.log("🧹 Cleaning up listeners & shutting down recognizer");
+      unsubscribeResults?.();
+      unsubscribePartial?.();
+      unsubscribeError?.();
+      unsubscribeStart?.();
+      
+      // Ensure proper cleanup of Voice2Text
+      try {
+        Voice2Text.stopListening().catch(() => {});
+        // Voice2Text.cancelListening().catch(() => {});
+        // Voice2Text.destroy().catch(() => {});
+      } catch (error) {
+        console.log("Error during Voice2Text cleanup:", error);
+      }
+    };
+  }, []);
 
-  // const checkPermissions = async () => {
-  //   if (Platform.OS === "android") {
-  //     try {
-  //       const granted = await PermissionsAndroid.request(
-  //         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-  //         {
-  //           title: "Microphone Permission",
-  //           message: "This app needs access to your microphone to record speech.",
-  //           buttonNeutral: "Ask Me Later",
-  //           buttonNegative: "Cancel",
-  //           buttonPositive: "OK",
-  //         }
-  //       );
-  //       console.log("🎤 Permission result:", granted);
-  //       if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-  //         setStatus("Permission granted. Ready to listen.");
+  // Add useFocusEffect to reinitialize speech recognition when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log("🔄 Screen focused - reinitializing speech recognition...");
+      
+      // Reset state when screen comes into focus
+      setRecognizedText("");
+      setStatus("Ready to listen");
+      setFinalReceived(false);
+      setManuallyStopped(false);
+      setIsListening(false);
+      setHasStartedListening(false);
+      
+      // Check permissions and start listening when screen is focused
+      setTimeout(() => {
+        checkPermissions();
+      }, 500); // Small delay to ensure proper initialization
+      
+      return () => {
+        console.log("🔄 Screen unfocused - cleaning up speech recognition...");
+        // Clean up when screen loses focus
+        try {
+          Voice2Text.stopListening().catch(() => {});
+          Voice2Text.cancelListening().catch(() => {});
+          setIsListening(false);
+          setHasStartedListening(false);
+        } catch (error) {
+          console.log("Error during focus cleanup:", error);
+        }
+      };
+    }, [])
+  );
 
-  //         // 👇 Auto-start after 2 seconds (only when permission granted)
-  //         setTimeout(() => {
-  //           console.log("⏳ Auto-starting listening after 2 seconds...");
-  //           startListening();
-  //         }, 2000);
-  //       } else {
-  //         setStatus("Microphone permission denied");
-  //       }
-  //     } catch (err) {
-  //       console.warn(err);
-  //       setStatus("Error checking permissions");
-  //     }
-  //   } else {
-  //     setStatus("iOS: Permission granted by default");
+  const checkPermissions = async () => {
+    if (Platform.OS === "android") {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          {
+            title: "Microphone Permission",
+            message: "This app needs access to your microphone to record speech.",
+            buttonNeutral: "Ask Me Later",
+            buttonNegative: "Cancel",
+            buttonPositive: "OK",
+          }
+        );
+        console.log("🎤 Permission result:", granted);
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          setStatus("Permission granted. Ready to listen.");
 
-  //     // 👇 Auto-start on iOS too
-  //     setTimeout(() => {
-  //       console.log("⏳ Auto-starting listening after 2 seconds...");
-  //       startListening();
-  //     }, 2000);
-  //   }
-  // };
+          // 👇 Auto-start after 2 seconds (only when permission granted and not already started)
+          if (!hasStartedListening) {
+            setTimeout(() => {
+              console.log("⏳ Auto-starting listening after 2 seconds...");
+              startListening();
+            }, 2000);
+          }
+        } else {
+          setStatus("Microphone permission denied");
+        }
+      } catch (err) {
+        console.warn(err);
+        setStatus("Error checking permissions");
+      }
+    } else {
+      setStatus("iOS: Permission granted by default");
 
-  // const startListening = async () => {
-  //   setStatus("Starting...");
-  //   setRecognizedText("");
-  //   setFinalReceived(false);
-  //   setManuallyStopped(false); // reset stop flag
-  //   try {
-  //     const started = await Voice2Text.startListening("en-US");
-  //     console.log("▶️ startListening returned:", started);
-  //     if (started) setStatus("Listening...");
-  //   } catch (e) {
-  //     console.error("❌ startListening error:", e);
-  //     setStatus("Error starting listening");
-  //   }
-  // };
+      // 👇 Auto-start on iOS too (only when not already started)
+      if (!hasStartedListening) {
+        setTimeout(() => {
+          console.log("⏳ Auto-starting listening after 2 seconds...");
+          startListening();
+        }, 2000);
+      }
+    }
+  };
 
-  // const stopListening = async () => {
-  //   console.log("⏹ stopListening pressed");
-  //   setManuallyStopped(true); // mark as manual stop
-  //   try {
-  //     await Voice2Text.stopListening();
-  //     console.log("✅ stopListening success");
-  //     setStatus("Stopped by user");
-  //   } catch (e) {
-  //     console.error("❌ stopListening error:", e);
-  //     setStatus("Error stopping listening");
-  //   }
-  // };
+  const startListening = async () => {
+    // Prevent duplicate calls
+    if (hasStartedListening || isListening) {
+      console.log("🎤 Already listening or has started, skipping...");
+      return;
+    }
 
-  // const clearText = () => {
-  //   setRecognizedText("");
-  //   setFinalReceived(false);
-  //   if (onTextChange) onTextChange("");
-  //   setStatus("Text cleared. Ready to listen.");
-  // };
+    console.log("🎤 Attempting to start listening...");
+    setStatus("Starting...");
+    setRecognizedText("");
+    setFinalReceived(false);
+    setManuallyStopped(false); // reset stop flag
+    setHasStartedListening(true);
+    
+    try {
+      // Ensure any previous session is properly stopped
+      await Voice2Text.stopListening().catch(() => {});
+      await Voice2Text.cancelListening().catch(() => {});
+      
+      const started = await Voice2Text.startListening("en-US");
+      console.log("▶️ startListening returned:", started);
+      if (started) {
+        setStatus("Listening...");
+        setIsListening(true);
+        console.log("✅ Successfully started listening");
+      } else {
+        setStatus("Failed to start listening");
+        setHasStartedListening(false);
+        console.log("❌ startListening returned false");
+      }
+    } catch (e) {
+      console.error("❌ startListening error:", e);
+      setStatus("Error starting listening");
+      setHasStartedListening(false);
+      
+      // Try to recover by attempting to restart after a short delay
+      setTimeout(() => {
+        console.log("🔄 Attempting to restart listening after error...");
+        startListening();
+      }, 1000);
+    }
+  };
+
+  const stopListening = async () => {
+    console.log("⏹ stopListening pressed");
+    setManuallyStopped(true); // mark as manual stop
+    try {
+      await Voice2Text.stopListening();
+      console.log("✅ stopListening success");
+      setStatus("Stopped by user");
+    } catch (e) {
+      console.error("❌ stopListening error:", e);
+      setStatus("Error stopping listening");
+    }
+  };
+
+  const clearText = () => {
+    setRecognizedText("");
+    setFinalReceived(false);
+    // Don't send cleared text back - only final result when closing
+    setStatus("Text cleared. Ready to listen.");
+  };
 
   // return (
   // <View style={[styles.container, style]}>
@@ -539,16 +634,16 @@ const PromptScreen: React.FC<SpeechToTextProps> = ({ onTextChange, style }) => {
           position: 'absolute',
           top: insets.top + 10, // adds padding for notch
           left: 20
-
-
         }]}>
           <Text style={styles.closeText}>✕</Text>
         </TouchableOpacity>
         {/* </View> */}
-        {/* Prompt Text */}
+        {/* Prompt Text - Shows welcome text initially, then recognized text */}
         <Text style={styles.promptText}>
-          {t('hey_tell_me')} {"\n"}  {t('like_eating_today')}
+          {recognizedText ? recognizedText : `${t('hey_tell_me')}\n${t('like_eating_today')}`}
         </Text>
+        
+        {/* Remove the separate recognized text container since we're showing it in the main prompt text */}
 
         {/* Background Blur Circles */}
         <View style={[styles.blurContainer, { marginLeft: 80, justifyContent: 'center', alignContent: 'center', alignSelf: 'center', alignItems: 'center', marginTop: 50 }]}>
@@ -682,6 +777,25 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 24,
     fontWeight: 'bold',
+  },
+    textContainer: {
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+    recognizedText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#666',
+    minHeight: 60,
+  },
+    label: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+    color: '#333',
   },
 });
 
