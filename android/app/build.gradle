@@ -51,7 +51,7 @@ react {
     // hermesFlags = ["-O", "-output-source-map"]
 
     /* Autolinking */
-    autolinkLibrariesWithApp()
+    // autolinkLibrariesWithApp()
 }
 
 /**
@@ -116,4 +116,23 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+    
+    // Manually added library dependencies
+    implementation project(':react-native-voice2text')
+    implementation project(':@react-native-async-storage_async-storage')
+    implementation project(':@react-native-community_datetimepicker')
+    implementation project(':@react-native-picker_picker')
+    implementation project(':react-native-geolocation-service')
+    implementation project(':react-native-gesture-handler')
+    implementation project(':react-native-get-random-values')
+    implementation project(':react-native-inappbrowser-reborn')
+    implementation project(':react-native-linear-gradient')
+    implementation project(':react-native-localize')
+    implementation project(':react-native-permissions')
+    implementation project(':react-native-reanimated')
+    implementation project(':react-native-safe-area-context')
+    implementation project(':react-native-screens')
+    implementation project(':react-native-svg')
+    implementation project(':react-native-vector-icons')
+    implementation project(':react-native-worklets')
 }

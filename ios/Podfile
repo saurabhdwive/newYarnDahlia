@@ -1,11 +1,12 @@
-# Resolve react_native_pods.rb with node to allow for hoisting
-require Pod::Executable.execute_command('node', ['-p',
-  'require.resolve(
-    "react-native/scripts/react_native_pods.rb",
-    {paths: [process.argv[1]]},
-  )', __dir__]).strip
+# Ensure CocoaPods installation_root is absolute to avoid Pathname prefix errors
+platform :ios, '16.0'
 
-platform :ios, min_ios_version_supported
+require 'pathname'
+Pod::Config.instance.instance_variable_set(:@installation_root, Pathname.new(File.expand_path(__dir__)))
+
+# Load React Native CocoaPods helpers
+require_relative '../node_modules/react-native/scripts/react_native_pods.rb'
+
 prepare_react_native_project!
 
 linkage = ENV['USE_FRAMEWORKS']
@@ -15,7 +16,7 @@ if linkage != nil
 end
 
 target 'dahlia' do
-  config = use_native_modules!
+  config = use_native_modules!(['node', File.expand_path('rn_config_fixed.js', __dir__)])
 
   use_react_native!(
     :path => config[:reactNativePath],

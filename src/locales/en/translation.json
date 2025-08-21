@@ -1,0 +1,69 @@
+{
+  "enterPhoneNumber": "Enter your phone number",
+  "otpDescription": "We will send you the 6 digit verification code",
+  "phonePlaceholder": "81 123 234 7899",
+  "getOTP": "Get my OTP",
+  "otpVerification": "OTP Verification",
+  "otpSent": "Your OTP was sent as a SMS",
+  "pleaseWait": "Please wait...",
+  "error": "Error",
+  "unexpectedError": "An unexpected error occurred. Please try again.",
+  "pleaseenterPhoneNumber": "Please enter a phone number",
+  "agreement_text": "By registering with Ask Dahlia!, you agree to accept",
+  "terms_link_text": "our terms & conditions",
+  "privacy_link_text": "privacy policy",
+  "Thailand": "Thailand",
+  "India": "India",
+  "USA": "USA",
+  "UK": "UK",
+  "UAE": "UAE",
+  "otp_sent_sms": "Your OTP was sent as an SMS",
+  "Bangladesh": "Bangladesh",
+  "otp_verification": "OTP Verification",
+  "otp_error_digits": "Please enter all 6 digits",
+  "verify": "Verify",
+  "please_wait": "Please wait...",
+  "cancel": "Cancel",
+  "ask_dahlia": "Ask Dahlia",
+  "hungry_for_anything": "Hungry for anything",
+  "special_question": "special?",
+  "order_pizza": "Order pizza",
+  "book_table": "Book a table",
+  "order_flowers": "Order Flowers",
+  "search": "Search",
+  "customer_service": "Customer Service",
+  "privacy_policy": "Privacy Policy",
+  "terms_conditions": "Terms & Conditions",
+  "log_out": "Log Out",
+  "delete_account": "Delete Account",
+  "profile": "Profile",
+  "type_or_speak_ask_dahlia": "Type or speak to Ask Dahlia",
+  "order_now": "Order now",
+  "promotion": "Promotion",
+  "notifications": "Notifications",
+  "hey_tell_me": "Hey, tell me what you feel",
+  "like_eating_today": "like eating today.",
+  "dahlia_listening": "Dahlia is listening....",
+  "critical": "Critical",
+  "order_tracking": "Order Tracking",
+  "support": "Support",
+  "more": "More",
+  "notifications_data": {
+    "order_cancelled": {
+      "title": "Order Cancelled",
+      "message": "Your order has been cancelled as the rider could not contact you on leaving the store."
+    },
+    "points_updated": {
+      "title": "Points Updated",
+      "message": "You have earned 50 points from your current order. Your points have been updated to your profile."
+    },
+    "profile_updated": {
+      "title": "Profile Updated",
+      "message": "You have earned 50 points from your current order. Your points have been updated to your profile."
+    },
+    "order_shipped": {
+      "title": "Order Shipped",
+      "message": "You have earned 50 points from your current order. Your points have been updated to your profile."
+    }
+  }
+}
